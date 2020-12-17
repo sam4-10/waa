@@ -1,0 +1,391 @@
+INSERT INTO ROLE(role_id, role) VALUES (1, 'ROLE_USER');
+
+
+INSERT into USER(user_id, email, password, name, enable, profile_verified, registration_verified, user_type, street, city, state, zipcode) values (1, 'user@miu.edu', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', 'User', 1, 1, 1, 0, 'Golden Dome Way', 'Fairfield', 'IA', '52556');
+
+insert into user_roles(user_id, role_id) values (1, 1);
+insert into user_roles(user_id, role_id) values (2, 2);
+
+
+insert into category(category_id, name, active) values (1, 'Car', 1);
+insert into category(category_id, name, active) values (2, 'Computer', 1);
+
+
+
+insert into product(product_id, caption, active, description, image_path, name, status, seller_id, price, upload_Date) values (4, 'Toyota Alphard', 1, 'The Toyota Alphard  is a luxury minivan produced by the Japanese automaker Toyota since 2002. It is available as a seven- or eight-seater with petrol and hybrid engine','alphard.jpg', 'Seller_Product_4', 1, 3,30000, '2020-11-25');
+insert into product(product_id, caption, active, description, image_path, name, status, seller_id, price, upload_Date) values (5, 'Toyota Corolla', 1, 'The Toyota Corolla is a line of subcompact and compact cars manufactured by Toyota. Introduced in 1966, the Corolla was the best-selling car worldwide by','corolla.jpg', 'Seller_Product_5', 1, 3, 18000, '2020-12-01');
+
+.............................................................................................................................................
+$(document).ready(function () {
+
+
+    $("#bookBtn").click(function (event) {
+        event.preventDefault();
+
+        let bookJSON = JSON.stringify($("#bookForm").serializeFormJSON());
+
+        $.ajax({
+            type: "POST",
+            url: "http://127.0.0.1:9999/books",
+            data: bookJSON,
+            contentType: "application/json",
+            dataType: "json",
+            success: function (result) {
+
+
+
+
+                console.log('success');
+                console.log(result);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log('error');
+                let errorObj = XMLHttpRequest.responseJSON;
+                if (errorObj.errorType === 'ValidationError') {
+                    let errorArray = errorObj.fieldErrors;
+
+                    let errorMessage = "<p>";
+
+                    $.each(errorArray, function (index, e) {
+                        errorMessage = errorMessage + e.field + " : " + e.message;
+                    });
+                    errorMessage += "</p>";
+
+                    $('#result').append(errorMessage);
+
+                } else {
+                    alert("error happened not because of validation")
+                }
+
+
+            }
+        });
+
+    });
+
+
+    $("#categorySubmitBtn").click(function () {
+
+        let data = JSON.stringify($("#categoryForm").serializeFormJSON());
+        $.ajax({
+            type: "POST",
+            url: "http://127.0.0.1:9999/api/addCategory",
+            data: data,
+            contentType: "application/json",
+            dataType: "json",
+            success: function (data) {
+                $("#categoryForm")[0].reset();
+                $("#result").empty();
+                $('#result').append('<H3 align="center"> OK!! <H3><p>').show();
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                console.log(XMLHttpRequest.responseJSON);
+                $("#result").empty();
+
+                if (XMLHttpRequest.responseJSON.errorType == "ValidationError") {
+                    let errorMsg = '<h3> Error(s)!! </h3>';
+                    errorMsg += "<p>";
+                    var errorList = XMLHttpRequest.responseJSON.fieldErrors;
+                    $.each(errorList, function (i, error) {
+                        errorMsg = errorMsg + error.message + '<br>';
+                    });
+                    errorMsg += '</p>';
+                    $('#result').append(errorMsg);
+                    $('#result').show();
+                } else {
+                    alert(errorObject.responseJSON.errors(0)); // "non" Validation
+                }
+            }
+        });
+    });
+});
+.....................................................................................................
+<html lang="en" xmlns:th="http://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>Category</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script type="text/javascript"
+            src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script type="text/javascript" th:src="@{/js/ajax.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+</head>
+<body>
+<div id="global">
+    <h1>Add Category</h1>
+    <!-- Success - or Validation errors -->
+    <div id="result">
+    </div>
+
+    <div id="formInput">
+        <!-- No action method handled by AJAX-->
+        <form id="categoryForm" method="post">
+            <p>
+                <label for="name"> Name : </label>
+                <input type="text" name="name" id="name" value=""/>
+            </p>
+            <p>
+                <label for="description"> Description: </label>
+                <input id="description" name="description" type="text"/>
+            </p>
+            <input type="button" id="categorySubmitBtn" value="Add Category"/>
+        </form>
+    </div>
+</div>
+
+
+</body>
+</html>
+..........................................................................................................
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>Add a book</title>
+    <script type="text/javascript"
+            src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script type="text/javascript" th:src="@{/js/ajax.js}"></script>
+</head>
+<body>
+<div id="result">
+
+</div>
+<form id="bookForm">
+    <p>Title: <input name="title"></p>
+    <p>ISBN: <input name="isbn"></p>
+    <input type="submit" value="Add a book" id="bookBtn"/>
+    <!--    <button></button>-->
+</form>
+
+</body>
+</html>
+.............................................................
+package com.packt.webstore.controller;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import com.packt.webstore.domain.Cart;
+import com.packt.webstore.domain.CartItem;
+import com.packt.webstore.domain.Product;
+import com.packt.webstore.exception.ProductNotFoundException;
+import com.packt.webstore.service.CartService;
+import com.packt.webstore.service.ProductService;
+
+@Controller
+@RequestMapping(value = "rest/cart")
+public class CartRestController {
+    @Autowired
+    private CartService cartService;
+    @Autowired
+    private ProductService productService;
+
+    @RequestMapping(method = RequestMethod.POST)
+    public @ResponseBody
+    Cart create(@RequestBody Cart cart) {
+
+        return cartService.create(cart);
+    }
+
+    @RequestMapping(value = "/{cartId}", method = RequestMethod.GET)
+    public @ResponseBody
+    Cart read(@PathVariable(value = "cartId") String cartId) {
+        return cartService.read(cartId);
+    }
+
+    @RequestMapping(value = "/{cartId}", method = RequestMethod.PUT)
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void update(@PathVariable(value = "cartId") String cartId, @RequestBody Cart cart) {
+        cartService.update(cartId, cart);
+    }
+
+    @RequestMapping(value = "/{cartId}", method = RequestMethod.DELETE)
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable(value = "cartId") String cartId) {
+        cartService.delete(cartId);
+    }
+
+    @RequestMapping(value = "/add/{productId}", method = RequestMethod.PUT)
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void addItem(@PathVariable String productId, HttpServletRequest request) {
+        System.out.println("======================");
+        String sessionId = request.getSession(true).getId();
+        System.out.println("------------------");
+        Cart cart = cartService.read(sessionId);
+        if (cart == null) {
+            cart = cartService.create(new Cart(sessionId));
+        }
+        System.out.println("-----------fdsfsdfsdf-------" + productId);
+        System.out.println("-----------fdsfsdddddddddddfsdf-------" + productService);
+        Product product = productService.getProductById(productId);
+        System.out.println("product: " + product);
+        if (product == null) {
+            throw new IllegalArgumentException(new ProductNotFoundException(productId));
+        }
+        cart.addCartItem(new CartItem(product));
+        cartService.update(sessionId, cart);
+    }
+
+    @RequestMapping(value = "/remove/{productId}", method = RequestMethod.PUT)
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void removeItem(@PathVariable String productId, HttpServletRequest request) {
+        String sessionId = request.getSession(true).getId();
+        Cart cart = cartService.read(sessionId);
+        if (cart == null) {
+            cart = cartService.create(new Cart(sessionId));
+        }
+        Product product = productService.getProductById(productId);
+        if (product == null) {
+            throw new IllegalArgumentException(new ProductNotFoundException(productId));
+        }
+        cart.removeCartItem(new CartItem(product));
+        cartService.update(sessionId, cart);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(value = HttpStatus.BAD_REQUEST, reason = "Illegal request, please verify your payload")
+    public void handleClientErrors(Exception ex) {
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR, reason = "Internal server error")
+    public void handleServerErrors(Exception ex) {
+    }
+}
+.............................................................................................................................
+package com.packt.webstore.exception;
+
+public class ProductNotFoundException extends RuntimeException {
+
+    private static final long serialVersionUID = 3935230281455340039L;
+
+    private String productId;
+
+    public ProductNotFoundException(String productId) {
+        this.productId = productId;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+}
+...........................................................................................................
+package com.packt.webstore.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "No products found under this category.")
+public class
+NoProductsFoundUnderCategoryException extends RuntimeException {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = 1554251630974234515L;
+
+}
+.............................................................................................
+package edu.mum.cs.ormrelationships.manytomany.formatter;
+
+import java.text.ParseException;
+import java.util.Locale;
+
+import edu.mum.cs.ormrelationships.manytomany.domain.Role;
+import edu.mum.cs.ormrelationships.manytomany.service.RoleService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.Formatter;
+import org.springframework.stereotype.Component;
+
+
+@Component
+public class RoleFormatter implements Formatter<Role> {
+
+    @Autowired
+    private RoleService roleService;
+
+    @Override
+    public String print(Role role, Locale locale) {
+        System.out.println("***********");
+        return String.valueOf(role.getId());
+    }
+
+    @Override
+    public Role parse(String text, Locale locale) throws ParseException {
+        System.out.println("-----------" + text);
+        System.out.println(roleService.get(Long.parseLong(text)).getRole());
+        return roleService.get(Long.parseLong(text));
+    }
+
+}
+.........................................................................................................................................
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Add User Form</title>
+    <link rel="stylesheet" th:href="@{/css/main.css}" href="../css/main.css"/>
+</head>
+<body>
+<div id="global">
+
+    <form th:action="@{/user/addUser}" th:object="${user}" method="post">
+        <fieldset>
+            <legend>Add a User</legend>
+            <p>
+                <label for="username">Username: </label>
+                <input id="username" th:field="*{username}">
+            </p>
+            <p>
+                <label for="password">Password: </label>
+                <input id="password" th:field="*{password}">
+            </p>
+            <p>
+                <label for="roles">Roles </label>
+                <select id="roles" th:field="*{roles}" size="5" multiple="true">
+                    <option th:each="role: ${roles}" th:value="${role.id}" th:text="${role.role}">
+                    </option>
+                </select>
+
+
+            </p>
+            <p id="buttons">
+                <input id="submit" type="submit" value="Add a User">
+            </p>
+        </fieldset>
+    </form>
+</div>
+</body>
+</html>
+............................................................................................................................
+<form action="#" th:action="@{/bidding/payment}" th:object="${payment}"
+                      method="post">
+                    <fieldset>
+                        <legend><span th:text="#{new.payment}">Make Payment</span></legend>
+                        <ul th:if="${#fields.hasErrors('*')}">
+                            <li th:each="err : ${#fields.errors('*')}" th:text="${err}"> Incorrect Data
+                            </li>
+                        </ul>
+<!--                        <p>-->
+                            <input id="payment_id" th:field="*{payment_id}" type="hidden">
+                            <input id="user_id" th:field="*{user_payment.user_id}" type="hidden">
+                            <input id="bidding_id" th:field="*{biddingPayment.bidding_id}" type="hidden">
+                            <input id="paymentDate" th:field="*{paymentDate}" type="hidden">
+
+                            <label for="deposit"><span data-th-text="#{payment.deposit}">Deposit:</span></label> <br/>
+                            <input class="form-control"  type="text" id="deposit" th:field="*{deposit}" tabindex="1" readonly/> <br/>
+                            <p th:if="${#fields.hasErrors('deposit')}" th:errors="*{deposit}" th:errorclass="fieldError">Incorrect Data</p>
+<!--                        </p>-->
